@@ -1,6 +1,6 @@
-// index.js
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
+import fs from 'fs/promises';
 
 dotenv.config();
 
@@ -46,15 +46,26 @@ async function getUpdatedIssues(projectKey) {
 }
 
 async function main() {
+    let output = `# ${new Date().toLocaleDateString()} 작업 내역\n`;
+    
     for (const team of teams) {
         const issues = await getUpdatedIssues(team);
         if (issues.length > 0) {
-            console.log(`\n${team}`);
-            issues.forEach(issue => 
-                // console.log(`* ${issue.key}: ${issue.summary} [${issue.status}] (${issue.updated})`)
-                console.log(`- ${issue.summary}`)
-            );
+            output += `\n## ${team}\n`;
+            issues.forEach(issue => {
+                output += `- ${issue.summary}\n`;
+            });
         }
+    }
+
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const fileName = `일일보고서용-Jira-${today}.md`;
+        
+        await fs.writeFile(fileName, output, 'utf-8');
+        console.log(`결과가 ${fileName}에 저장되었습니다.`);
+    } catch (error) {
+        console.error('파일 저장 중 오류 발생:', error);
     }
 }
 
