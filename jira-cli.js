@@ -14,11 +14,11 @@ const auth = Buffer.from(`${EMAIL}:${API_TOKEN}`).toString('base64');
 
 async function getUpdatedIssues(projectKey) {
     const today = new Date().toISOString().split('T')[0];
-    const jql = encodeURIComponent(`project = ${projectKey} AND updated >= "${today}" ORDER BY updated DESC`);
+    const jql = encodeURIComponent(`project = ${projectKey} AND updated >= "${today}" AND status = "완료" ORDER BY creator ASC`);
     
     try {
         const response = await fetch(
-            `https://${JIRA_DOMAIN}/rest/api/3/search?jql=${jql}&fields=key,summary,status,updated`,
+            `https://${JIRA_DOMAIN}/rest/api/3/search?jql=${jql}&fields=summary`,
             {
                 headers: {
                     'Authorization': `Basic ${auth}`,
