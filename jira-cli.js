@@ -60,10 +60,19 @@ async function main() {
 
     try {
         const today = new Date().toISOString().split('T')[0];
+        const dirPath = './daily';
         const fileName = `일일보고서용-Jira-${today}.md`;
+        const filePath = `${dirPath}/${fileName}`;
         
-        await fs.writeFile(fileName, output, 'utf-8');
-        console.log(`결과가 ${fileName}에 저장되었습니다.`);
+        // daily 폴더가 없으면 생성
+        try {
+            await fs.access(dirPath);
+        } catch {
+            await fs.mkdir(dirPath, { recursive: true });
+        }
+        
+        await fs.writeFile(filePath, output, 'utf-8');
+        console.log(`결과가 ${filePath}에 저장되었습니다.`);
     } catch (error) {
         console.error('파일 저장 중 오류 발생:', error);
     }
