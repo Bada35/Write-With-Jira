@@ -51,7 +51,8 @@ async function main() {
         if (issues.length > 0) {
             console.log(`\n${team}`);
             issues.forEach(issue => 
-                console.log(`* ${issue.key}: ${issue.summary} [${issue.status}] (${issue.updated})`)
+                // console.log(`* ${issue.key}: ${issue.summary} [${issue.status}] (${issue.updated})`)
+                console.log(`- ${issue.summary}`)
             );
         }
     }
