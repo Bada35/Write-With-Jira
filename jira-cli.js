@@ -18,7 +18,7 @@ async function getUpdatedIssues(projectKey) {
     
     try {
         const response = await fetch(
-            `https://${JIRA_DOMAIN}/rest/api/3/search?jql=${jql}&fields=summary,status`,
+            `https://${JIRA_DOMAIN}/rest/api/3/search?jql=${jql}&fields=key,summary,status`,  // 뭐 들고올지 명시시
             {
                 headers: {
                     'Authorization': `Basic ${auth}`,
@@ -33,12 +33,14 @@ async function getUpdatedIssues(projectKey) {
         }
 
         const data = await response.json();
-        return data.issues.map(issue => ({
-            key: issue.key,
-            summary: issue.fields.summary,
-            status: issue.fields.status.name,
-            updated: new Date(issue.fields.updated).toLocaleString()
-        }));
+        return data.issues
+            .filter(issue => issue.fields.status.name === "완료")
+            .map(issue => ({
+                key: issue.key,
+                summary: issue.fields.summary,
+                status: issue.fields.status.name,
+                updated: new Date(issue.fields.updated).toLocaleString()
+            }));
     } catch (error) {
         console.error(`Error fetching issues for ${projectKey}:`, error.message);
         return [];
@@ -54,6 +56,7 @@ async function main() {
             output += `\n## ${team}\n`;
             issues.forEach(issue => {
                 output += `- ${issue.summary}\n`;
+                // output += `- ${issue.key}: ${issue.summary} [${issue.status}]\n`; 디버깅용
             });
         }
     }
