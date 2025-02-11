@@ -7,8 +7,7 @@ dotenv.config();
 const JIRA_DOMAIN = process.env.JIRA_DOMAIN;
 const EMAIL = process.env.JIRA_EMAIL;
 const API_TOKEN = process.env.JIRA_API_TOKEN;
-
-const teams = ['S12P11E101', 'S12P11E102', 'S12P11E103', 'S12P11E104', 'S12P11E105', 'S12P11E106', 'S12P11E107'];
+const teams = process.env.JIRA_TEAMS.split(',');
 
 const auth = Buffer.from(`${EMAIL}:${API_TOKEN}`).toString('base64');
 
@@ -55,8 +54,8 @@ async function main() {
         if (issues.length > 0) {
             output += `\n## ${team}\n`;
             issues.forEach(issue => {
-                output += `- ${issue.summary}\n`;
-                // output += `- ${issue.key}: ${issue.summary} [${issue.status}]\n`; 디버깅용
+                // output += `- ${issue.summary}\n`;
+                output += `- ${issue.key}: ${issue.summary} [${issue.status}]\n`;
             });
         }
     }
