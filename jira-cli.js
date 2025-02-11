@@ -54,8 +54,8 @@ async function main() {
         if (issues.length > 0) {
             output += `\n## ${team}\n`;
             issues.forEach(issue => {
-                // output += `- ${issue.summary}\n`;
-                output += `- ${issue.key}: ${issue.summary} [${issue.status}]\n`;
+                output += `- ${issue.summary}\n`;
+                // output += `- ${issue.key}: ${issue.summary} [${issue.status}]\n`;
             });
         }
     }
