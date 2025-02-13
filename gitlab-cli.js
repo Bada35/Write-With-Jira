@@ -111,7 +111,8 @@ async function main() {
         if (commits.length > 0) {
             output += `## ${repo}\n`;
             commits.forEach(commit => {
-                output += `- ${commit.title} (작성자: ${commit.author}, 시간: ${commit.created_at}, 브랜치: ${commit.branches.join(', ')})\n`;
+                // output += `- ${commit.title} (작성자: ${commit.author}, 시간: ${commit.created_at}, 브랜치: ${commit.branches.join(', ')})\n`;
+                output += `- ${commit.title}\n`;
             });
             output += '\n';
         }
