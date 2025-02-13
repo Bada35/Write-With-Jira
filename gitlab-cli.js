@@ -61,9 +61,12 @@ async function getTodayCommits(projectId) {
 
         const commits = await response.json();
         
+        // Merge branch로 시작하는 커밋 필터링
+        const filteredCommits = commits.filter(commit => !commit.title.startsWith('Merge branch'));
+        
         // 각 커밋의 브랜치 정보 가져오기
         const commitsWithBranch = await Promise.all(
-            commits.map(async (commit) => {
+            filteredCommits.map(async (commit) => {
                 const branchResponse = await fetch(
                     `https://${GITLAB_DOMAIN}/api/v4/projects/${projectId}/repository/commits/${commit.id}/refs?type=branch`,
                     {
