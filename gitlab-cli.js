@@ -46,7 +46,7 @@ async function getTodayCommits(projectId) {
     const today = new Date().toISOString().split('T')[0];
     try {
         const response = await fetch(
-            `https://${GITLAB_DOMAIN}/api/v4/projects/${projectId}/repository/commits?since=${today}T00:00:00Z`,
+            `https://${GITLAB_DOMAIN}/api/v4/projects/${projectId}/repository/commits?since=${today}T00:00:00Z&all=true`,
             {
                 headers: {
                     'PRIVATE-TOKEN': GITLAB_TOKEN,
@@ -60,12 +60,40 @@ async function getTodayCommits(projectId) {
         }
 
         const commits = await response.json();
-        return commits.map(commit => ({
-            title: commit.title,
-            author: commit.author_name,
-            created_at: new Date(commit.created_at).toLocaleString(),
-            branch: commit.branch || 'unknown'
-        }));
+        
+        // 각 커밋의 브랜치 정보 가져오기
+        const commitsWithBranch = await Promise.all(
+            commits.map(async (commit) => {
+                const branchResponse = await fetch(
+                    `https://${GITLAB_DOMAIN}/api/v4/projects/${projectId}/repository/commits/${commit.id}/refs?type=branch`,
+                    {
+                        headers: {
+                            'PRIVATE-TOKEN': GITLAB_TOKEN,
+                            'Accept': 'application/json'
+                        }
+                    }
+                );
+                
+                if (!branchResponse.ok) {
+                    return {
+                        ...commit,
+                        branches: ['unknown']
+                    };
+                }
+                
+                const refs = await branchResponse.json();
+                const branches = refs.map(ref => ref.name);
+                
+                return {
+                    title: commit.title,
+                    author: commit.author_name,
+                    created_at: new Date(commit.created_at).toLocaleString(),
+                    branches: branches
+                };
+            })
+        );
+
+        return commitsWithBranch;
     } catch (error) {
         console.error(`Error fetching commits for project ${projectId}:`, error.message);
         return [];
@@ -83,7 +111,7 @@ async function main() {
         if (commits.length > 0) {
             output += `## ${repo}\n`;
             commits.forEach(commit => {
-                output += `- ${commit.title} (작성자: ${commit.author}, 시간: ${commit.created_at})\n`;
+                output += `- ${commit.title} (작성자: ${commit.author}, 시간: ${commit.created_at}, 브랜치: ${commit.branches.join(', ')})\n`;
             });
             output += '\n';
         }
