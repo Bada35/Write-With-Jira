@@ -8,13 +8,13 @@ const GITLAB_DOMAIN = process.env.GITLAB_DOMAIN || 'gitlab.com';
 const GITLAB_TOKEN = process.env.GITLAB_TOKEN;
 
 const repositories = [
-    '/s12-webmobile3-sub1/S12P11E101',
-    '/s12-webmobile3-sub1/S12P11E102', 
-    '/s12-webmobile1-sub1/S12P11E103',
-    '/s12-webmobile1-sub1/S12P11E104',
-    '/s12-webmobile1-sub1/S12P11E105',
-    '/s12-webmobile1-sub1/S12P11E106',
-    '/s12-webmobile2-sub1/S12P11E107'
+    '/s12-ai-image-sub1/S12P21E201',
+    '/s12-fintech-finance-sub1/S12P21E202', 
+    '/s12-bigdata-recom-sub1/S12P21E203',
+    '/s12-fintech-finance-sub1/S12P21E204',
+    '/s12-metaverse-game-sub1/S12P21E205',
+    '/s12-fintech-finance-sub1/S12P21E206',
+    '/s12-ai-image-sub1/S12P21E207'
 ];
 
 async function getProjectId(repoPath) {
