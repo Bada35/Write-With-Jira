@@ -7,15 +7,7 @@ dotenv.config();
 const GITLAB_DOMAIN = process.env.GITLAB_DOMAIN || 'gitlab.com';
 const GITLAB_TOKEN = process.env.GITLAB_TOKEN;
 
-const repositories = [
-    '/s12-ai-image-sub1/S12P21E201',
-    '/s12-fintech-finance-sub1/S12P21E202', 
-    '/s12-bigdata-recom-sub1/S12P21E203',
-    '/s12-fintech-finance-sub1/S12P21E204',
-    '/s12-metaverse-game-sub1/S12P21E205',
-    '/s12-fintech-finance-sub1/S12P21E206',
-    '/s12-ai-image-sub1/S12P21E207'
-];
+const repositories = process.env.REPOSITORIES ? process.env.REPOSITORIES.split(',') : [];
 
 async function getProjectId(repoPath) {
     const encodedPath = encodeURIComponent(repoPath.substring(1)); // 첫 '/' 제거하고 인코딩
