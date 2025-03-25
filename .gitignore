@@ -1,4 +1,5 @@
 .env
 node_modules/
-daily/
+daily-jira/
+daily-git/
 *.json 
