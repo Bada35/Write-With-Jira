@@ -28,7 +28,7 @@ async function combineReports() {
         let combinedContent = '';
 
         for (const team of teams) {
-            const teamPattern = new RegExp(`## .*${team}[^#]*`, 'g');
+            const teamPattern = new RegExp(`## .*${team}[\\s\\S]*?(?=\\n## |$)`, 'g');
             
             const jiraMatch = jiraContent.match(teamPattern);
             const gitMatch = gitContent.match(teamPattern);
@@ -42,8 +42,12 @@ async function combineReports() {
                 }
                 
                 if (gitMatch) {
-                    const gitSection = gitMatch[0].replace(/^## .*\n/, '');
-                    combinedContent += `### Git 커밋 내역\n${gitSection.trim()}\n\n`;
+                    const gitSection = gitMatch[0]
+                        .replace(/^## .*\n/, '')
+                        .trim();
+                    if (gitSection && gitSection.length > 2) {  // "- [" 같은 불완전한 라인 방지
+                        combinedContent += `### Git 커밋 내역\n${gitSection}\n\n`;
+                    }
                 }
             }
         }
