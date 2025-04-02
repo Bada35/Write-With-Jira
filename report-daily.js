@@ -14,8 +14,8 @@ async function combineReports() {
         ]);
 
         const today = new Date().toISOString().split('T')[0];
-        const gitReportPath = `../daily-git/일일보고서용-Git-${today}.md`;
-        const jiraReportPath = `../daily-jira/일일보고서용-Jira-${today}.md`;
+        const gitReportPath = `./daily-git/일일보고서용-Git-${today}.md`;
+        const jiraReportPath = `./daily-jira/일일보고서용-Jira-${today}.md`;
 
         // 각 파일 읽기
         const [gitContent, jiraContent] = await Promise.all([
@@ -53,7 +53,7 @@ async function combineReports() {
         }
 
         // 결과 저장
-        const dailyReportDir = '../daily-report';
+        const dailyReportDir = './daily-report';
         const combinedReportPath = path.join(dailyReportDir, `일일보고서-${today}.md`);
 
         await fs.mkdir(dailyReportDir, { recursive: true });
