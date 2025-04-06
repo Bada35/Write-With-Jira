@@ -62,7 +62,7 @@ async function main() {
 
     try {
         const today = new Date().toISOString().split('T')[0];
-        const dirPath = './daily';
+        const dirPath = './daily-jira';
         const fileName = `일일보고서용-Jira-${today}.md`;
         const filePath = `${dirPath}/${fileName}`;
         
