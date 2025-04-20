@@ -6,7 +6,7 @@ dotenv.config();
 
 const GITLAB_DOMAIN = process.env.GITLAB_DOMAIN || 'gitlab.com';
 const GITLAB_TOKEN = process.env.GITLAB_TOKEN;
-const TODAY = '2025-04-02'; // 전역 변수로 today 선언
+const TODAY = '2025-04-21'; // 전역 변수로 today 선언
 
 // 사용자 이름 캐시 (API 호출 최소화)
 const userDisplayNameCache = {};
@@ -157,7 +157,14 @@ function groupCommitsByAuthor(commits) {
 }
 
 async function main() {
+    // 사용자 매핑 로드 (이미 구현된 경우)
+    // await loadUserMappingFromFile();
+    
     let output = `# ${TODAY} 커밋 내역\n\n`;
+    
+    // 저장소별 저자 커밋 추적
+    const repoAuthorCommits = {};
+    // 전체 저자 커밋 통계
     const totalAuthorCommits = {};
     
     // 저장소별 처리
@@ -167,6 +174,9 @@ async function main() {
 
         const commits = await getTodayCommits(projectId);
         if (commits.length > 0) {
+            // 저장소 정보 저장
+            repoAuthorCommits[repo] = {};
+            
             output += `## ${repo}\n`;
             
             // 사용자별로 커밋 그룹화
@@ -182,6 +192,9 @@ async function main() {
                 });
                 output += '\n';
                 
+                // 저장소별 사용자 통계 추가
+                repoAuthorCommits[repo][author] = userCommits.length;
+                
                 // 전체 사용자별 통계 업데이트
                 if (!totalAuthorCommits[author]) {
                     totalAuthorCommits[author] = 0;
@@ -191,13 +204,21 @@ async function main() {
         }
     }
     
-    // 전체 사용자별 커밋 수 요약
-    output += `## 개발자별 총 커밋 수\n`;
-    for (const author in totalAuthorCommits) {
-        output += `- ${author}: ${totalAuthorCommits[author]}개 커밋\n`;
+    // 팀별 개발자 커밋 수 요약
+    output += `## 팀별 개발자 커밋 수\n`;
+    
+    for (const repo in repoAuthorCommits) {
+        output += `### ${repo}\n`;
+        const authorStats = repoAuthorCommits[repo];
+        
+        // 커밋 수 기준 내림차순 정렬
+        const sortedAuthors = Object.entries(authorStats)
+            .sort((a, b) => b[1] - a[1]) // 내림차순 정렬
+            .map(([author, count]) => `- ${author}: ${count}개 커밋`);
+        
+        output += sortedAuthors.join('\n') + '\n\n';
     }
-    output += '\n';
-
+    
     try {
         const dirPath = './daily-git';
         const fileName = `일일보고서용-Git-${TODAY}.md`;
