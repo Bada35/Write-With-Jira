@@ -6,6 +6,7 @@ dotenv.config();
 
 const GITLAB_DOMAIN = process.env.GITLAB_DOMAIN || 'gitlab.com';
 const GITLAB_TOKEN = process.env.GITLAB_TOKEN;
+const TODAY = new Date().toISOString().split('T')[0]; // 전역 변수로 today 선언
 
 const repositories = process.env.REPOSITORIES ? process.env.REPOSITORIES.split(',') : [];
 
@@ -35,10 +36,9 @@ async function getProjectId(repoPath) {
 }
 
 async function getTodayCommits(projectId) {
-    const today = new Date().toISOString().split('T')[0];
     try {
         const response = await fetch(
-            `https://${GITLAB_DOMAIN}/api/v4/projects/${projectId}/repository/commits?since=${today}T00:00:00Z&all=true`,
+            `https://${GITLAB_DOMAIN}/api/v4/projects/${projectId}/repository/commits?since=${TODAY}T00:00:00Z&all=true`,
             {
                 headers: {
                     'PRIVATE-TOKEN': GITLAB_TOKEN,
@@ -95,9 +95,25 @@ async function getTodayCommits(projectId) {
     }
 }
 
-async function main() {
-    let output = `# ${new Date().toLocaleDateString()} 커밋 내역\n\n`;
+// 사용자별 커밋을 그룹화하는 함수
+function groupCommitsByAuthor(commits) {
+    const authorCommits = {};
     
+    commits.forEach(commit => {
+        if (!authorCommits[commit.author]) {
+            authorCommits[commit.author] = [];
+        }
+        authorCommits[commit.author].push(commit);
+    });
+    
+    return authorCommits;
+}
+
+async function main() {
+    let output = `# ${TODAY} 커밋 내역\n\n`;
+    const totalAuthorCommits = {};
+    
+    // 저장소별 처리
     for (const repo of repositories) {
         const projectId = await getProjectId(repo);
         if (!projectId) continue;
@@ -105,18 +121,39 @@ async function main() {
         const commits = await getTodayCommits(projectId);
         if (commits.length > 0) {
             output += `## ${repo}\n`;
-            commits.forEach(commit => {
-                // output += `- ${commit.title} (작성자: ${commit.author}, 시간: ${commit.created_at}, 브랜치: ${commit.branches.join(', ')})\n`;
-                output += `- ${commit.title}\n`;
-            });
-            output += '\n';
+            
+            // 사용자별로 커밋 그룹화
+            const authorCommits = groupCommitsByAuthor(commits);
+            
+            // 사용자별 커밋 내역 출력
+            for (const author in authorCommits) {
+                const userCommits = authorCommits[author];
+                output += `### ${author} (${userCommits.length}개 커밋)\n`;
+                
+                userCommits.forEach(commit => {
+                    output += `- ${commit.title} (브랜치: ${commit.branches.join(', ')})\n`;
+                });
+                output += '\n';
+                
+                // 전체 사용자별 통계 업데이트
+                if (!totalAuthorCommits[author]) {
+                    totalAuthorCommits[author] = 0;
+                }
+                totalAuthorCommits[author] += userCommits.length;
+            }
         }
     }
+    
+    // 전체 사용자별 커밋 수 요약
+    output += `## 개발자별 총 커밋 수\n`;
+    for (const author in totalAuthorCommits) {
+        output += `- ${author}: ${totalAuthorCommits[author]}개 커밋\n`;
+    }
+    output += '\n';
 
     try {
         const dirPath = './daily-git';
-        const today = new Date().toISOString().split('T')[0];
-        const fileName = `일일보고서용-Git-${today}.md`;
+        const fileName = `일일보고서용-Git-${TODAY}.md`;
         const filePath = `${dirPath}/${fileName}`;
         
         // daily-git 폴더가 없으면 생성
