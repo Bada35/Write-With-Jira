@@ -6,7 +6,50 @@ dotenv.config();
 
 const GITLAB_DOMAIN = process.env.GITLAB_DOMAIN || 'gitlab.com';
 const GITLAB_TOKEN = process.env.GITLAB_TOKEN;
-const TODAY = new Date().toISOString().split('T')[0]; // 전역 변수로 today 선언
+const TODAY = '2025-04-02'; // 전역 변수로 today 선언
+
+// 사용자 이름 캐시 (API 호출 최소화)
+const userDisplayNameCache = {};
+
+// GitLab API를 사용하여 사용자 이름 조회
+async function getUserDisplayName(username) {
+  // 이미 캐시에 있는 경우 캐시된 값 반환
+  if (userDisplayNameCache[username]) {
+    return userDisplayNameCache[username];
+  }
+
+  try {
+    const response = await fetch(
+      `https://${GITLAB_DOMAIN}/api/v4/users?username=${encodeURIComponent(username)}`,
+      {
+        headers: {
+          'PRIVATE-TOKEN': GITLAB_TOKEN,
+          'Accept': 'application/json'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      console.error(`사용자 정보 조회 에러 (${response.status}): ${username}`);
+      return username; // 오류 발생 시 원래 사용자명 반환
+    }
+
+    const users = await response.json();
+    
+    // 사용자를 찾은 경우 표시 이름(name) 반환
+    if (users && users.length > 0 && users[0].name) {
+      const displayName = users[0].name;
+      // 캐시에 저장
+      userDisplayNameCache[username] = displayName;
+      return displayName;
+    }
+    
+    return username; // 사용자를 찾지 못하면 원래 사용자명 반환
+  } catch (error) {
+    console.error(`사용자 정보 조회 중 오류: ${username}`, error.message);
+    return username; // 오류 발생 시 원래 사용자명 반환
+  }
+}
 
 const repositories = process.env.REPOSITORIES ? process.env.REPOSITORIES.split(',') : [];
 
@@ -56,7 +99,7 @@ async function getTodayCommits(projectId) {
         // Merge branch로 시작하는 커밋 필터링
         const filteredCommits = commits.filter(commit => !commit.title.startsWith('Merge branch'));
         
-        // 각 커밋의 브랜치 정보 가져오기
+        // 각 커밋의 브랜치 정보 가져오기 및 표시 이름 조회
         const commitsWithBranch = await Promise.all(
             filteredCommits.map(async (commit) => {
                 const branchResponse = await fetch(
@@ -79,9 +122,13 @@ async function getTodayCommits(projectId) {
                 const refs = await branchResponse.json();
                 const branches = refs.map(ref => ref.name);
                 
+                // GitLab API를 사용하여 사용자의 표시 이름 조회
+                const displayName = await getUserDisplayName(commit.author_name);
+                
                 return {
                     title: commit.title,
-                    author: commit.author_name,
+                    author: displayName, // 표시 이름(닉네임) 사용
+                    username: commit.author_name, // 원래 사용자명도 보존
                     created_at: new Date(commit.created_at).toLocaleString(),
                     branches: branches
                 };
