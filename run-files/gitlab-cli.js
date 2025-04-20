@@ -6,7 +6,12 @@ dotenv.config();
 
 const GITLAB_DOMAIN = process.env.GITLAB_DOMAIN || 'gitlab.com';
 const GITLAB_TOKEN = process.env.GITLAB_TOKEN;
-const TODAY = '2025-04-21'; // 전역 변수로 today 선언
+
+// 날짜 변수 설정 - 환경 변수로 지정된 날짜 또는 현재 날짜 사용
+const TARGET_DATE = process.env.TARGET_DATE; // 형식: YYYY-MM-DD
+const TODAY = TARGET_DATE || new Date().toISOString().split('T')[0]; 
+
+console.log(`보고서 날짜: ${TODAY}`);
 
 // 사용자 이름 캐시 (API 호출 최소화)
 const userDisplayNameCache = {};
@@ -80,8 +85,14 @@ async function getProjectId(repoPath) {
 
 async function getTodayCommits(projectId) {
     try {
+        // 해당 날짜의 시작과 끝 시간 설정
+        const startTime = `${TODAY}T00:00:00Z`;
+        const endTime = `${TODAY}T23:59:59Z`;
+
+        console.log(`커밋 조회 기간: ${startTime} ~ ${endTime}`);
+        
         const response = await fetch(
-            `https://${GITLAB_DOMAIN}/api/v4/projects/${projectId}/repository/commits?since=${TODAY}T00:00:00Z&all=true`,
+            `https://${GITLAB_DOMAIN}/api/v4/projects/${projectId}/repository/commits?since=${startTime}&until=${endTime}&all=true`,
             {
                 headers: {
                     'PRIVATE-TOKEN': GITLAB_TOKEN,
@@ -95,9 +106,11 @@ async function getTodayCommits(projectId) {
         }
 
         const commits = await response.json();
+        console.log(`프로젝트 ${projectId}에서 총 ${commits.length}개의 커밋을 발견했습니다.`);
         
         // Merge branch로 시작하는 커밋 필터링
         const filteredCommits = commits.filter(commit => !commit.title.startsWith('Merge branch'));
+        console.log(`Merge 커밋 필터링 후 ${filteredCommits.length}개 남음`);
         
         // 각 커밋의 브랜치 정보 가져오기 및 표시 이름 조회
         const commitsWithBranch = await Promise.all(
@@ -125,11 +138,15 @@ async function getTodayCommits(projectId) {
                 // GitLab API를 사용하여 사용자의 표시 이름 조회
                 const displayName = await getUserDisplayName(commit.author_name);
                 
+                // 커밋 생성 시간 객체 생성
+                const commitDate = new Date(commit.created_at);
+                
                 return {
                     title: commit.title,
                     author: displayName, // 표시 이름(닉네임) 사용
                     username: commit.author_name, // 원래 사용자명도 보존
-                    created_at: new Date(commit.created_at).toLocaleString(),
+                    created_at: commitDate.toLocaleString(), // 사람이 읽기 쉬운 형식으로 변환
+                    commit_date: commitDate, // 날짜 객체 보존 (필요시 추가 처리용)
                     branches: branches
                 };
             })
