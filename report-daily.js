@@ -2,6 +2,9 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
 import path from 'path';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const execAsync = promisify(exec);
 
@@ -13,7 +16,11 @@ async function combineReports() {
             execAsync('node run-files/jira-cli.js')
         ]);
 
-        const today = new Date().toISOString().split('T')[0];
+        // 날짜 변수 설정 - 환경 변수로 지정된 날짜 또는 현재 날짜 사용
+        const TARGET_DATE = process.env.TARGET_DATE; // 형식: YYYY-MM-DD
+        const today = TARGET_DATE || new Date().toISOString().split('T')[0];
+        console.log(`보고서 날짜: ${today}`);
+
         const gitReportPath = `./daily-git/일일보고서용-Git-${today}.md`;
         const jiraReportPath = `./daily-jira/일일보고서용-Jira-${today}.md`;
 

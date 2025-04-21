@@ -12,62 +12,7 @@ const TARGET_DATE = process.env.TARGET_DATE; // 형식: YYYY-MM-DD
 const TODAY = TARGET_DATE || new Date().toISOString().split('T')[0]; 
 
 console.log(`보고서 날짜: ${TODAY}`);
-/*
-// 사용자 이름 캐시 (API 호출 최소화)
-const userDisplayNameCache = {};
 
-// GitLab API를 사용하여 사용자 이름 조회
-async function getUserDisplayName(username) {
-  // 이미 캐시에 있는 경우 캐시된 값 반환
-  if (userDisplayNameCache[username]) {
-    return userDisplayNameCache[username];
-  }
-
-  try {
-    // 사용자명이 없거나 undefined인 경우 처리
-    if (!username) {
-      console.warn('사용자명이 없습니다. 기본값 "Unknown" 반환');
-      return 'Unknown';
-    }
-
-    const apiUrl = `https://${GITLAB_DOMAIN}/api/v4/users?username=${encodeURIComponent(username)}`;
-    console.log(`사용자 정보 조회 API 호출: ${apiUrl}`);
-    
-    const response = await fetch(apiUrl, {
-      headers: {
-        'PRIVATE-TOKEN': GITLAB_TOKEN,
-        'Accept': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      console.error(`사용자 정보 조회 에러 (${response.status}): ${username}`);
-      const errorText = await response.text();
-      console.error(`응답 내용: ${errorText}`);
-      return username; // 오류 발생 시 원래 사용자명 반환
-    }
-
-    const users = await response.json();
-    console.log(`사용자 정보 응답 (${username}):`, JSON.stringify(users).substring(0, 200) + (JSON.stringify(users).length > 200 ? '...' : ''));
-    
-    // 사용자를 찾은 경우 표시 이름(name) 반환
-    if (users && users.length > 0 && users[0].name) {
-      const displayName = users[0].name;
-      console.log(`사용자 표시명 찾음: ${username} -> ${displayName}`);
-      // 캐시에 저장
-      userDisplayNameCache[username] = displayName;
-      return displayName;
-    } else {
-      console.warn(`사용자 표시명을 찾지 못함: ${username} (API 응답에 데이터 없음)`);
-    }
-    
-    return username; // 사용자를 찾지 못하면 원래 사용자명 반환
-  } catch (error) {
-    console.error(`사용자 정보 조회 중 오류: ${username}`, error.message);
-    return username; // 오류 발생 시 원래 사용자명 반환
-  }
-}
-*/
 const repositories = process.env.REPOSITORIES ? process.env.REPOSITORIES.split(',') : [];
 
 async function getProjectId(repoPath) {

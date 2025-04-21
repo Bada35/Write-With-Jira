@@ -9,11 +9,16 @@ const EMAIL = process.env.JIRA_EMAIL;
 const API_TOKEN = process.env.JIRA_API_TOKEN;
 const teams = process.env.JIRA_TEAMS.split(',');
 
+// 날짜 변수 설정 - 환경 변수로 지정된 날짜 또는 현재 날짜 사용
+const TARGET_DATE = process.env.TARGET_DATE; // 형식: YYYY-MM-DD
+const TODAY = TARGET_DATE || new Date().toISOString().split('T')[0];
+
+console.log(`보고서 날짜: ${TODAY}`);
+
 const auth = Buffer.from(`${EMAIL}:${API_TOKEN}`).toString('base64');
 
 async function getUpdatedIssues(projectKey) {
-    const today = new Date().toISOString().split('T')[0];
-    const jql = encodeURIComponent(`project = ${projectKey} AND updated >= "${today}" ORDER BY creator ASC`);
+    const jql = encodeURIComponent(`project = ${projectKey} AND updated >= "${TODAY}" ORDER BY creator ASC`);
     
     try {
         const response = await fetch(
@@ -47,7 +52,7 @@ async function getUpdatedIssues(projectKey) {
 }
 
 async function main() {
-    let output = `# ${new Date().toLocaleDateString()} 작업 내역\n`;
+    let output = `# ${new Date(TODAY).toLocaleDateString()} 작업 내역\n`;
     
     for (const team of teams) {
         const issues = await getUpdatedIssues(team);
@@ -61,9 +66,8 @@ async function main() {
     }
 
     try {
-        const today = new Date().toISOString().split('T')[0];
         const dirPath = './daily-jira';
-        const fileName = `일일보고서용-Jira-${today}.md`;
+        const fileName = `일일보고서용-Jira-${TODAY}.md`;
         const filePath = `${dirPath}/${fileName}`;
         
         // daily 폴더가 없으면 생성
