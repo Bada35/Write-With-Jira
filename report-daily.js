@@ -45,25 +45,29 @@ async function combineReports() {
         }
 
         for (const team of teams) {
-            const teamPattern = new RegExp(`## .*${team}[\\s\\S]*?(?=\\n## |$)`, 'g');
+            // Jira 이슈 검색
+            const jiraTeamPattern = new RegExp(`## .*${team}[\\s\\S]*?(?=\\n## |$)`, 'g');
+            const jiraMatch = jiraContent.match(jiraTeamPattern);
             
-            const jiraMatch = jiraContent.match(teamPattern);
-            // Git 커밋 내역에서는 팀별 개발자 커밋 수 섹션 제외
-            const gitMatchPattern = new RegExp(`## .*${team}[\\s\\S]*?(?=\\n## |$)`, 'g');
-            const gitMatch = gitContent.match(gitMatchPattern);
+            // Git 커밋 내역 검색 - 각 팀 저장소에 있는 상세 커밋 내역
+            const gitTeamRepoPattern = new RegExp(`## .*S12P31${team}[\\s\\S]*?(?=\\n## |$)`, 'g');
+            const gitMatch = gitContent.match(gitTeamRepoPattern);
 
             if (jiraMatch || gitMatch) {
                 combinedContent += `\n## ${team}팀\n\n`;
                 
+                // Jira 이슈 추가
                 if (jiraMatch) {
                     const jiraSection = jiraMatch[0].replace(/^## .*\n/, '');
                     combinedContent += `### Jira 완료된 이슈\n${jiraSection.trim()}\n\n`;
                 }
                 
+                // Git 커밋 내역 추가
                 if (gitMatch) {
-                    const gitSection = gitMatch[0]
+                    let gitSection = gitMatch[0]
                         .replace(/^## .*\n/, '')
                         .trim();
+                    
                     if (gitSection && gitSection.length > 2) {  // "- [" 같은 불완전한 라인 방지
                         combinedContent += `### Git 커밋 내역\n${gitSection}\n\n`;
                     }
