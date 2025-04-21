@@ -29,16 +29,28 @@ async function combineReports() {
             fs.readFile(gitReportPath, 'utf-8'),
             fs.readFile(jiraReportPath, 'utf-8')
         ]);
+        
+        // Git 보고서에서 팀별 개발자 커밋 수 섹션 추출
+        const teamCommitsPattern = /## 팀별 개발자 커밋 수[\s\S]*?(?=\n## |$)/g;
+        const teamCommitsMatch = gitContent.match(teamCommitsPattern);
+        const teamCommitsSection = teamCommitsMatch ? teamCommitsMatch[0] : '';
 
         // 팀별로 데이터 정리
         const teams = ['E201', 'E202', 'E203', 'E204', 'E205', 'E206', 'E207'];
         let combinedContent = '';
+        
+        // 팀별 개발자 커밋 수를 맨 위에 배치
+        if (teamCommitsSection) {
+            combinedContent += teamCommitsSection + '\n\n';
+        }
 
         for (const team of teams) {
             const teamPattern = new RegExp(`## .*${team}[\\s\\S]*?(?=\\n## |$)`, 'g');
             
             const jiraMatch = jiraContent.match(teamPattern);
-            const gitMatch = gitContent.match(teamPattern);
+            // Git 커밋 내역에서는 팀별 개발자 커밋 수 섹션 제외
+            const gitMatchPattern = new RegExp(`## .*${team}[\\s\\S]*?(?=\\n## |$)`, 'g');
+            const gitMatch = gitContent.match(gitMatchPattern);
 
             if (jiraMatch || gitMatch) {
                 combinedContent += `\n## ${team}팀\n\n`;
