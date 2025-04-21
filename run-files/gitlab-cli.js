@@ -12,7 +12,7 @@ const TARGET_DATE = process.env.TARGET_DATE; // 형식: YYYY-MM-DD
 const TODAY = TARGET_DATE || new Date().toISOString().split('T')[0]; 
 
 console.log(`보고서 날짜: ${TODAY}`);
-
+/*
 // 사용자 이름 캐시 (API 호출 최소화)
 const userDisplayNameCache = {};
 
@@ -24,29 +24,41 @@ async function getUserDisplayName(username) {
   }
 
   try {
-    const response = await fetch(
-      `https://${GITLAB_DOMAIN}/api/v4/users?username=${encodeURIComponent(username)}`,
-      {
-        headers: {
-          'PRIVATE-TOKEN': GITLAB_TOKEN,
-          'Accept': 'application/json'
-        }
+    // 사용자명이 없거나 undefined인 경우 처리
+    if (!username) {
+      console.warn('사용자명이 없습니다. 기본값 "Unknown" 반환');
+      return 'Unknown';
+    }
+
+    const apiUrl = `https://${GITLAB_DOMAIN}/api/v4/users?username=${encodeURIComponent(username)}`;
+    console.log(`사용자 정보 조회 API 호출: ${apiUrl}`);
+    
+    const response = await fetch(apiUrl, {
+      headers: {
+        'PRIVATE-TOKEN': GITLAB_TOKEN,
+        'Accept': 'application/json'
       }
-    );
+    });
 
     if (!response.ok) {
       console.error(`사용자 정보 조회 에러 (${response.status}): ${username}`);
+      const errorText = await response.text();
+      console.error(`응답 내용: ${errorText}`);
       return username; // 오류 발생 시 원래 사용자명 반환
     }
 
     const users = await response.json();
+    console.log(`사용자 정보 응답 (${username}):`, JSON.stringify(users).substring(0, 200) + (JSON.stringify(users).length > 200 ? '...' : ''));
     
     // 사용자를 찾은 경우 표시 이름(name) 반환
     if (users && users.length > 0 && users[0].name) {
       const displayName = users[0].name;
+      console.log(`사용자 표시명 찾음: ${username} -> ${displayName}`);
       // 캐시에 저장
       userDisplayNameCache[username] = displayName;
       return displayName;
+    } else {
+      console.warn(`사용자 표시명을 찾지 못함: ${username} (API 응답에 데이터 없음)`);
     }
     
     return username; // 사용자를 찾지 못하면 원래 사용자명 반환
@@ -55,7 +67,7 @@ async function getUserDisplayName(username) {
     return username; // 오류 발생 시 원래 사용자명 반환
   }
 }
-
+*/
 const repositories = process.env.REPOSITORIES ? process.env.REPOSITORIES.split(',') : [];
 
 async function getProjectId(repoPath) {
@@ -91,8 +103,12 @@ async function getTodayCommits(projectId) {
 
         console.log(`커밋 조회 기간: ${startTime} ~ ${endTime}`);
         
+        // 페이지 크기와 페이지 번호 설정
+        const perPage = 100; // 한 페이지당 최대 항목 수
+        const page = 1;      // 첫 페이지
+        
         const response = await fetch(
-            `https://${GITLAB_DOMAIN}/api/v4/projects/${projectId}/repository/commits?since=${startTime}&until=${endTime}&all=true`,
+            `https://${GITLAB_DOMAIN}/api/v4/projects/${projectId}/repository/commits?since=${startTime}&until=${endTime}&all=true&per_page=${perPage}&page=${page}`,
             {
                 headers: {
                     'PRIVATE-TOKEN': GITLAB_TOKEN,
@@ -135,18 +151,20 @@ async function getTodayCommits(projectId) {
                 const refs = await branchResponse.json();
                 const branches = refs.map(ref => ref.name);
                 
-                // GitLab API를 사용하여 사용자의 표시 이름 조회
-                const displayName = await getUserDisplayName(commit.author_name);
+                // 커밋 정보에서 직접 author_name 사용 (이미 실제 이름으로 표시됨)
+                // GitLab은 커밋 정보에 이미 author_name을 실제 이름으로 제공함
+                const displayName = commit.author_name;
+                // console.log(`커밋 작성자: ${displayName}`);
                 
                 // 커밋 생성 시간 객체 생성
                 const commitDate = new Date(commit.created_at);
                 
                 return {
                     title: commit.title,
-                    author: displayName, // 표시 이름(닉네임) 사용
-                    username: commit.author_name, // 원래 사용자명도 보존
-                    created_at: commitDate.toLocaleString(), // 사람이 읽기 쉬운 형식으로 변환
-                    commit_date: commitDate, // 날짜 객체 보존 (필요시 추가 처리용)
+                    author: displayName,
+                    username: commit.author_email || commit.author_name, // 이메일 정보가 있으면 사용
+                    created_at: commitDate.toLocaleString(),
+                    commit_date: commitDate,
                     branches: branches
                 };
             })
@@ -205,7 +223,7 @@ async function main() {
                 output += `### ${author} (${userCommits.length}개 커밋)\n`;
                 
                 userCommits.forEach(commit => {
-                    output += `- ${commit.title} (브랜치: ${commit.branches.join(', ')})\n`;
+                    output += `- ${commit.title} \n`;
                 });
                 output += '\n';
                 
@@ -228,9 +246,12 @@ async function main() {
         output += `### ${repo}\n`;
         const authorStats = repoAuthorCommits[repo];
         
-        // 커밋 수 기준 내림차순 정렬
+        // 이름 기준 가나다순(사전순) 정렬
         const sortedAuthors = Object.entries(authorStats)
-            .sort((a, b) => b[1] - a[1]) // 내림차순 정렬
+            .sort((a, b) => {
+                // 한글 이름 비교를 위한 로케일 비교(사전순)
+                return a[0].localeCompare(b[0], 'ko-KR');
+            })
             .map(([author, count]) => `- ${author}: ${count}개 커밋`);
         
         output += sortedAuthors.join('\n') + '\n\n';
