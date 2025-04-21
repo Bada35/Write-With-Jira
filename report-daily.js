@@ -8,6 +8,19 @@ dotenv.config();
 
 const execAsync = promisify(exec);
 
+// 환경 변수에서 팀 정보 및 저장소 형식 가져오기
+const TEAMS = process.env.TEAM_IDS ? process.env.TEAM_IDS.split(',') : ['E201', 'E202', 'E203', 'E204', 'E205', 'E206', 'E207'];
+const REPO_PREFIX = process.env.REPO_PREFIX || 'S12P31'; // 저장소 접두사 (예: S12P31E201의 'S12P31')
+const REPO_PATH_PREFIX = process.env.REPO_PATH_PREFIX || '/s12-final/'; // 저장소 경로 접두사 (예: /s12-final/S12P31E201의 '/s12-final/')
+
+// 보고서 파일 경로 및 이름 설정
+const GIT_REPORT_DIR = process.env.GIT_REPORT_DIR || './daily-git';
+const GIT_REPORT_FILENAME = process.env.GIT_REPORT_FILENAME || '일일보고서용-Git';
+const JIRA_REPORT_DIR = process.env.JIRA_REPORT_DIR || './daily-jira';
+const JIRA_REPORT_FILENAME = process.env.JIRA_REPORT_FILENAME || '일일보고서용-Jira';
+const DAILY_REPORT_DIR = process.env.DAILY_REPORT_DIR || './daily-report';
+const DAILY_REPORT_FILENAME = process.env.DAILY_REPORT_FILENAME || '일일보고서';
+
 async function combineReports() {
     try {
         // 먼저 각각의 스크립트 실행
@@ -21,13 +34,13 @@ async function combineReports() {
         const today = TARGET_DATE || new Date().toISOString().split('T')[0];
         console.log(`보고서 날짜: ${today}`);
 
-        const gitReportPath = `./daily-git/일일보고서용-Git-${today}.md`;
-        const jiraReportPath = `./daily-jira/일일보고서용-Jira-${today}.md`;
+        const gitReportPath = `${GIT_REPORT_DIR}/${GIT_REPORT_FILENAME}-${today}.md`;
+        const jiraReportPath = `${JIRA_REPORT_DIR}/${JIRA_REPORT_FILENAME}-${today}.md`;
 
         // 각 파일 읽기
         const [gitContent, jiraContent] = await Promise.all([
-            fs.readFile(gitReportPath, 'utf-8'),
-            fs.readFile(jiraReportPath, 'utf-8')
+            fs.readFile(gitReportPath, 'utf-8').catch(() => ''), // 파일이 없으면 빈 문자열 반환
+            fs.readFile(jiraReportPath, 'utf-8').catch(() => '')
         ]);
         
         // Git 보고서에서 팀별 개발자 커밋 수 섹션 추출
@@ -36,7 +49,6 @@ async function combineReports() {
         const teamCommitsSection = teamCommitsMatch ? teamCommitsMatch[0] : '';
 
         // 팀별로 데이터 정리
-        const teams = ['E201', 'E202', 'E203', 'E204', 'E205', 'E206', 'E207'];
         let combinedContent = '';
         
         // 팀별 개발자 커밋 수를 맨 위에 배치
@@ -44,13 +56,15 @@ async function combineReports() {
             combinedContent += teamCommitsSection + '\n\n';
         }
 
-        for (const team of teams) {
+        for (const team of TEAMS) {
             // Jira 이슈 검색
             const jiraTeamPattern = new RegExp(`## .*${team}[\\s\\S]*?(?=\\n## |$)`, 'g');
             const jiraMatch = jiraContent.match(jiraTeamPattern);
             
+            // Git 저장소 경로 구성 (예: /s12-final/S12P31E201)
+            const repoPathPattern = `${REPO_PATH_PREFIX}${REPO_PREFIX}${team}`;
             // Git 커밋 내역 검색 - 각 팀 저장소에 있는 상세 커밋 내역
-            const gitTeamRepoPattern = new RegExp(`## .*S12P31${team}[\\s\\S]*?(?=\\n## |$)`, 'g');
+            const gitTeamRepoPattern = new RegExp(`## .*${repoPathPattern.replace(/\//g, '\\/')}[\\s\\S]*?(?=\\n## |$)`, 'g');
             const gitMatch = gitContent.match(gitTeamRepoPattern);
 
             if (jiraMatch || gitMatch) {
@@ -76,10 +90,9 @@ async function combineReports() {
         }
 
         // 결과 저장
-        const dailyReportDir = './daily-report';
-        const combinedReportPath = path.join(dailyReportDir, `일일보고서-${today}.md`);
+        const combinedReportPath = path.join(DAILY_REPORT_DIR, `${DAILY_REPORT_FILENAME}-${today}.md`);
 
-        await fs.mkdir(dailyReportDir, { recursive: true });
+        await fs.mkdir(DAILY_REPORT_DIR, { recursive: true });
         await fs.writeFile(combinedReportPath, combinedContent.trim(), 'utf-8');
 
         console.log(`일일보고서가 생성되었습니다: ${combinedReportPath}`);

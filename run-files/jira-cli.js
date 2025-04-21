@@ -13,6 +13,10 @@ const teams = process.env.JIRA_TEAMS.split(',');
 const TARGET_DATE = process.env.TARGET_DATE; // 형식: YYYY-MM-DD
 const TODAY = TARGET_DATE || new Date().toISOString().split('T')[0];
 
+// 환경 변수에서 보고서 파일 이름 형식 가져오기
+const REPORT_FILENAME = process.env.JIRA_REPORT_FILENAME || '일일보고서용-Jira';
+const REPORT_DIR = process.env.JIRA_REPORT_DIR || './daily-jira';
+
 console.log(`보고서 날짜: ${TODAY}`);
 
 const auth = Buffer.from(`${EMAIL}:${API_TOKEN}`).toString('base64');
@@ -66,8 +70,8 @@ async function main() {
     }
 
     try {
-        const dirPath = './daily-jira';
-        const fileName = `일일보고서용-Jira-${TODAY}.md`;
+        const dirPath = REPORT_DIR;
+        const fileName = `${REPORT_FILENAME}-${TODAY}.md`;
         const filePath = `${dirPath}/${fileName}`;
         
         // daily 폴더가 없으면 생성
