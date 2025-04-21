@@ -157,20 +157,12 @@ async function main() {
             // 저장소 정보 저장
             repoAuthorCommits[repo] = {};
             
-            output += `## ${repo}\n`;
-            
             // 사용자별로 커밋 그룹화
             const authorCommits = groupCommitsByAuthor(commits);
             
             // 사용자별 커밋 내역 출력
             for (const author in authorCommits) {
                 const userCommits = authorCommits[author];
-                output += `### ${author} (${userCommits.length}개 커밋)\n`;
-                
-                userCommits.forEach(commit => {
-                    output += `- ${commit.title} \n`;
-                });
-                output += '\n';
                 
                 // 저장소별 사용자 통계 추가
                 repoAuthorCommits[repo][author] = userCommits.length;
@@ -184,7 +176,7 @@ async function main() {
         }
     }
     
-    // 팀별 개발자 커밋 수 요약
+    // 팀별 개발자 커밋 수 요약을 맨 앞에 배치
     output += `## 팀별 개발자 커밋 수\n`;
     
     for (const repo in repoAuthorCommits) {
@@ -200,6 +192,31 @@ async function main() {
             .map(([author, count]) => `- ${author}: ${count}개 커밋`);
         
         output += sortedAuthors.join('\n') + '\n\n';
+    }
+    
+    // 각 저장소별 상세 커밋 내역
+    for (const repo of repositories) {
+        const projectId = await getProjectId(repo);
+        if (!projectId) continue;
+
+        const commits = await getTodayCommits(projectId);
+        if (commits.length > 0) {
+            output += `## ${repo}\n`;
+            
+            // 사용자별로 커밋 그룹화
+            const authorCommits = groupCommitsByAuthor(commits);
+            
+            // 사용자별 커밋 내역 출력
+            for (const author in authorCommits) {
+                const userCommits = authorCommits[author];
+                output += `### ${author} (${userCommits.length}개 커밋)\n`;
+                
+                userCommits.forEach(commit => {
+                    output += `- ${commit.title} \n`;
+                });
+                output += '\n';
+            }
+        }
     }
     
     try {
